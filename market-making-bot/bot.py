@@ -25,6 +25,11 @@ class MarketMaker:
     def _initialize_exchange(self):
         """Initialize the exchange client"""
         platform = self.config['platform']
+        
+        # Validate platform before accessing credentials
+        if platform not in ['polymarket', 'kalshi', 'limitless']:
+            raise ValueError(f"Unsupported platform: {platform}")
+        
         creds = self.config['credentials'][platform]
         
         print(f"\n{'='*60}")
@@ -43,8 +48,6 @@ class MarketMaker:
                 api_key=creds['api_key'],
                 private_key=creds['private_key']
             )
-        else:
-            raise ValueError(f"Unsupported platform: {platform}")
         
         print(f"✓ Connected to {platform}")
         
@@ -123,19 +126,32 @@ class MarketMaker:
             # If short (negative inventory), raise prices to encourage buying
             inventory_skew = -inventory * adjustment_factor
         
-        # Calculate bid and ask
-        bid_price = fair_price - (base_spread / 2) + inventory_skew
-        ask_price = fair_price + (base_spread / 2) + inventory_skew
+        # Calculate bid and ask with inventory adjustment
+        adjusted_fair = fair_price + inventory_skew
+        bid_price = adjusted_fair - (base_spread / 2)
+        ask_price = adjusted_fair + (base_spread / 2)
         
         # Ensure valid prices (between 0.01 and 0.99)
         bid_price = max(0.01, min(0.99, bid_price))
         ask_price = max(0.01, min(0.99, ask_price))
         
-        # Ensure minimum spread
-        if ask_price - bid_price < self.config['min_spread']:
+        # Ensure minimum spread is maintained after bounds checking
+        current_spread = ask_price - bid_price
+        if current_spread < self.config['min_spread']:
+            # Recalculate to maintain minimum spread
             mid = (bid_price + ask_price) / 2
-            bid_price = mid - self.config['min_spread'] / 2
-            ask_price = mid + self.config['min_spread'] / 2
+            half_spread = self.config['min_spread'] / 2
+            bid_price = max(0.01, mid - half_spread)
+            ask_price = min(0.99, mid + half_spread)
+            
+            # If we still can't maintain spread due to bounds, adjust
+            if ask_price - bid_price < self.config['min_spread']:
+                if bid_price <= 0.01:
+                    bid_price = 0.01
+                    ask_price = min(0.99, bid_price + self.config['min_spread'])
+                elif ask_price >= 0.99:
+                    ask_price = 0.99
+                    bid_price = max(0.01, ask_price - self.config['min_spread'])
         
         return bid_price, ask_price
     

@@ -73,6 +73,7 @@ class TestQuotingWorkflow(unittest.TestCase):
         self.config = {
             'platform': 'polymarket',
             'target_spread': 0.04,
+            'min_spread': 0.02,
             'order_size': 10,
             'max_inventory': 100,
             'rebalance_threshold': 50,
@@ -168,6 +169,7 @@ class TestOrderFillDetection(unittest.TestCase):
         self.config = {
             'platform': 'polymarket',
             'target_spread': 0.04,
+            'min_spread': 0.02,
             'order_size': 10,
             'dry_run': False,
             'credentials': {'polymarket': {'private_key': 'test'}}
