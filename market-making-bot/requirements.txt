@@ -1,0 +1,6 @@
+pmxt>=0.4.4
+python-dotenv>=1.0.0
+
+# Testing dependencies
+coverage>=7.0.0
+unittest-xml-reporting>=3.2.0
